@@ -14,7 +14,7 @@ public class CommunityUtil {
 
     // MD5加密
     // hello -> abc123def456
-    // hello + 3e4a8 -> abc123def456abc【通过随机字符串加密】
+    // hello + 3e4a8【getSalt】 -> abc123def456abc【通过随机字符串加密】
     public static String md5(String key) {
         if (StringUtils.isBlank(key)) {
             return null;
