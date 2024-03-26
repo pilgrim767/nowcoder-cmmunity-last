@@ -193,4 +193,14 @@ public class AlphaController {
 
     //选择用cookie还是session取决于业务，但总的来说，能用cookie就用cookie，减少业务端的压力
 
+    // ajax示例
+    // ResponseBody注释代表浏览器返回的不是网页，而是一个字符串
+    @RequestMapping(path = "/ajax", method = RequestMethod.POST)
+    @ResponseBody
+    public String testAjax(String name, int age) {
+        System.out.println(name);
+        System.out.println(age);
+        return CommunityUtil.getJSONString(0, "操作成功!");
+    }
+
 }
