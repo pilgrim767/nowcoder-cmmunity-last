@@ -4,6 +4,7 @@ import com.nowcoder.community.entity.LoginTicket;
 import org.apache.ibatis.annotations.*;
 
 @Mapper
+@Deprecated
 public interface LoginTicketMapper {
 
     //insert注解，@Insert({"","",""}) 将 “”，“”多个字符串拼成一个sql语句

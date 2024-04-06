@@ -3,11 +3,14 @@ package com.nowcoder.community.controller;
 import com.google.code.kaptcha.Producer;
 import com.nowcoder.community.entity.User;
 import com.nowcoder.community.service.UserService;
+import com.nowcoder.community.util.CommunityUtil;
+import com.nowcoder.community.util.RedisKeyUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.CookieValue;
@@ -23,6 +26,7 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import static com.nowcoder.community.util.CommunityConstant.*;
 
@@ -39,6 +43,9 @@ public class LoginController{
 
     @Autowired
     private Producer kaptchaProducer;
+
+    @Autowired
+    private RedisTemplate redisTemplate;
 
     @Value("${server.servlet.context-path}")
     private String contextPath;
@@ -96,7 +103,17 @@ public class LoginController{
         BufferedImage image = kaptchaProducer.createImage(text);//利用字符串画一个图片
 
         // 将验证码存入session
-        session.setAttribute("kaptcha", text);
+        // session.setAttribute("kaptcha", text);
+
+        // 验证码的归属
+        String kaptchaOwner = CommunityUtil.generateUUID(); // 获取验证码
+        Cookie cookie = new Cookie("kaptchaOwner", kaptchaOwner); // 客户端保存
+        cookie.setMaxAge(60); // 生效时间60s
+        cookie.setPath(contextPath); // 有效路径：整个项目下都有效
+        response.addCookie(cookie); // 发送给客户端
+        // 将验证码存入Redis
+        String redisKey = RedisKeyUtil.getKaptchaKey(kaptchaOwner);
+        redisTemplate.opsForValue().set(redisKey, text, 60, TimeUnit.SECONDS);
 
         // 将图片输出给浏览器
         response.setContentType("image/png");//声明浏览器返回什么格式的工具
@@ -114,9 +131,18 @@ public class LoginController{
     @RequestMapping(path = "/login", method = RequestMethod.POST)
     //登录方法（用户名，密码，验证码，登录页面上的记住我【记住密码】, 返回数据响应数据，session，让cookie保存的）
     public String login(String username, String password, String code, boolean rememberme,
-                        Model model, HttpSession session, HttpServletResponse response) {
+                        Model model, /* HttpSession session, */HttpServletResponse response,@CookieValue("kaptchaOwner") String kaptchaOwner) {
         // 检查验证码
-        String kaptcha = (String) session.getAttribute("kaptcha");
+        // String kaptcha = (String) session.getAttribute("kaptcha");
+        String kaptcha = null;
+
+        // 数据没有失效
+        if (StringUtils.isNotBlank(kaptchaOwner)) {
+            // 从redis中取值
+            String redisKey = RedisKeyUtil.getKaptchaKey(kaptchaOwner);
+            kaptcha = (String) redisTemplate.opsForValue().get(redisKey);
+        }
+
         if (StringUtils.isBlank(kaptcha) || StringUtils.isBlank(code) || !kaptcha.equalsIgnoreCase(code)) {
             model.addAttribute("codeMsg", "验证码不正确!");
             return "/site/login";//回到登录页面
