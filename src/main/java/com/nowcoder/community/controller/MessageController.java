@@ -207,7 +207,7 @@ public class MessageController implements CommunityConstant{
 
         // 查询关注类通知
         message = messageService.findLatestNotice(user.getId(), TOPIC_FOLLOW);
-        //messageVO = new HashMap<>();
+        //messageVO = new HashMap<>(); 如果用户没有关注一个人，那么不会执行下面的if代码
         if (message != null) {
             Map<String, Object> messageVO = new HashMap<>();
             messageVO.put("message", message);
@@ -227,6 +227,7 @@ public class MessageController implements CommunityConstant{
 
             model.addAttribute("followNotice", messageVO);
         }
+        // model.addAttribute("followNotice", messageVO); 则model会装一个空的message进去，就会报错
 
 
         // 查询未读消息数量
